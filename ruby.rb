@@ -13,13 +13,14 @@ class Game
   def make_display
     length = word.choice.strip!.length
     @display = Array.new(length, '_')
-    @display.join(' ')
+    puts "\nA mystery word has been selected. Godspeed.\n"
+    puts @display.join(' ')
   end
 
   def check_winner
     if @display == @word.choice.split(//)
       puts 'Congrats! you guessed the word.'
-      @turn = 12
+      @turn = 9
     end
   end
 
@@ -29,7 +30,7 @@ class Game
       word_array.each_with_index do |letter, index|
         @display[index] = letter if letter == @player.guess
       end
-      puts "Yay #{@player.name}! '#{@player.guess}' is in the word. '\n'"
+      puts "Phew #{@player.name}, '#{@player.guess}' is in the word.'\n'"
       puts @display.join(' ')
       @turn += 1
     else
@@ -39,13 +40,24 @@ class Game
 
   def miss
     @misses << @player.guess
-    puts "Sorry, #{@player.name} '#{@player.guess}' is not in the word. '\n'"
+    puts "Sorry, #{@player.name} '#{@player.guess}' is not in the word.\n"
     puts "Misses: #{@misses.join(', ')}"
     @turn += 1
-    # puts @display.join(' ')
+    puts @display.join(' ')
+    puts "\n"
   end
 
-  # play game
+  def play_game
+    @word.select_word
+    puts @word.choice
+    make_display
+    until @turn >= 9
+      @player.player_guess
+      match
+      check_winner
+    end
+    # replay?
+  end
   # replay - all you need to do is set a new instance of SecretWord
 end
 
@@ -77,26 +89,22 @@ class Player
     puts 'Please enter your name.'
     @name = gets.chomp
     @guess = ''
+    @turn = 1
   end
 
   def player_guess
-    puts "\n#{@name}, enter your guess (one letter a - z)."
+    puts "\nTurn: #{@turn}"
+    puts "#{@name}, enter your guess (one letter a - z)."
     input = gets.chomp.downcase
     until input.length == 1 && input =~ /[a-z]/
       puts "#{@name}! Enter a valid guess (one letter a - z)."
       input = gets.chomp.downcase
     end
     @guess = input
+    @turn += 1
   end
 end
 
-
+puts 'Welcome to terminal hangman. You get 8 attempts to guess the word. Good luck!'
 test = Game.new
-# game.playgame
-
-# playgame
-test.word.select_word
-puts test.word.choice
-puts test.make_display
-test.player.player_guess
-test.match
+test.play_game
