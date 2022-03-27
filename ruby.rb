@@ -1,24 +1,28 @@
-module Methods
-end
+require 'yaml'
 
 # class to instantiate Player and Secretword, and methods provide game logic
 class Game
-  attr_accessor :word, :player
+  attr_accessor :word, :player, :display, :life
 
   def initialize
     @word = SecretWord.new
     @player = Player.new
     @display = ''
     @life = 8
+    load_or_new
   end
 
   # make underscores based on secret word length
   def make_display
-    length = word.choice.strip!.length
-    @display = Array.new(length, '_')
-    puts "\nA mystery word has been selected. Godspeed.\n"
-    puts @display.join(' ')
-    puts "\n"
+    if @display == ''
+      length = word.choice.strip!.length
+      @display = Array.new(length, '_')
+      puts "\nA mystery word has been selected. Godspeed.\n"
+      puts @display.join(' ')
+      puts "\n"
+    else
+      false
+    end
   end
 
   # check if player has guessed secret word
@@ -31,6 +35,45 @@ class Game
     end
   end
 
+  # check if 'save' entered and get desired file name
+  def save_game
+    if player.guess == 'save'
+      puts 'Enter a file name (no spaces)'
+      filename = gets.chomp
+      to_yaml(filename)
+    end
+  end
+
+  # make directory if it does not exist, create file using user's file name
+  # convert to YAML and close the file
+  def to_yaml(filename)
+    Dir.mkdir('saved_games') unless File.exist?('saved_games')
+    f = File.open("saved_games/#{filename}.yml", 'w')
+    YAML.dump({
+      :word => @word,
+      :display => @display,
+      :life => @life, 
+      :player_misses => @player.misses,
+      :player_guess_history => @player.guess_history
+    }, f)
+    f.close
+  end
+
+  def load_game
+    puts 'Enter the filename (no spaces).'
+    filename = gets.chomp
+    from_yaml(filename)
+  end
+
+  def from_yaml(filename)
+    f = YAML.load(File.read("./saved_games/#{filename}.yml"))
+    @word = f[:word]
+    @display = f[:display]
+    @life = f[:life]
+    @player.misses = f[:player_misses]
+    @player.guess_history = f[:player_guess_history]
+  end
+
   # check to see if player guess matches letter in secret word
   def match
     if @word.choice.include?(@player.guess)
@@ -38,7 +81,7 @@ class Game
       word_array.each_with_index do |letter, index|
         @display[index] = letter if letter == @player.guess
       end
-      puts "\nPhew, #{@player.name} '#{@player.guess}' is in the word."
+      puts "\nPhew, '#{@player.guess}' is in the word."
       puts "\n"
       puts @display.join(' ')
       puts "\n"
@@ -50,7 +93,7 @@ class Game
   # if wrong guess add to "misses" history
   def miss
     player.misses << @player.guess
-    puts "\nSorry, #{@player.name} '#{@player.guess}' is not in the word.\n"
+    puts "\nSorry, '#{@player.guess}' is not in the word.\n"
     puts "Misses: #{player.misses.join(', ')}\n"
     @life -= 1
     puts @display.join(' ')
@@ -60,24 +103,39 @@ class Game
   # allow game replay
   def replay
     puts 'Enter "y" to play again.'
-    response = gets.chomp
-    if response == 'Y' || response == 'y'
-      @word = SecretWord.new
-      @player = Player.new
-      @life = 8
-      play_game
+    response = gets.chomp.downcase
+    if response == 'y'
+      new_game
     else
-      puts "Thanks for playing!"
+      puts 'Thanks for playing!'
+    end
+  end
+
+  def new_game
+    new = Game.new
+    new.play_game
+  end
+
+  def load_or_new
+    puts 'Enter "1" to play a new game or "2" to load a saved game.'
+    input = gets.chomp
+    case input
+    when '1'
+      @word.select_word
+      play_game
+    when '2'
+      load_game
+      play_game
     end
   end
 
   def play_game
-    @word.select_word
     puts @word.choice
     make_display
     until @life.zero?
       puts "Life left: #{@life}"
-      @player.player_guess
+      @player.player_input
+      save_game
       match
       check_winner
     end
@@ -99,32 +157,36 @@ class SecretWord
     word_array = []
     word_list = File.open('./google-10000-english-no-swears.txt')
     word_list.each do |word|
-      if word.length >= 5 && word.length <= 12
-        word_array << word
-      end
+      word_array << word if word.length >= 5 && word.length <= 12
     end
     @choice = word_array.sample
   end
 end
 
-# Class to prompt guesses, validate them, store them, and store player name.
+# Class to prompt guesses, validate them, store them.
 class Player
-  attr_accessor :guess, :name, :misses
+  attr_accessor :guess, :misses, :guess_history
 
   def initialize
-    puts 'Please enter your name.'
-    @name = gets.chomp
     @guess = ''
     @misses = []
     @guess_history = []
   end
 
   # get player input and loop until it meets requirements
-  def player_guess
-    puts "#{@name}, enter your guess (one letter a - z)."
+  def player_input
+    puts "Enter your guess (one letter a - z), or 'save' to save."
     input = gets.chomp.downcase
+    if input == 'save'
+      @guess = input
+    else
+      validate_input(input)
+    end
+  end
+
+  def validate_input(input = '')
     until input.length == 1 && input =~ /[a-z]/
-      puts "\n#{@name}! Enter a valid guess (one letter a - z)."
+      puts "\nEnter a valid guess (one letter a - z)."
       input = gets.chomp.downcase
     end
     @guess = input
@@ -136,7 +198,7 @@ class Player
   def check_history(input)
     if @guess_history.include?(input)
       puts "You've already tried that one!"
-      player_guess
+      validate_input
     else
       false
     end
@@ -144,5 +206,6 @@ class Player
 end
 
 puts 'Welcome to terminal hangman. You get 8 attempts to guess the word. Good luck!'
+
 test = Game.new
-test.play_game
+# test.load_game
