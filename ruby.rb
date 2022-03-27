@@ -12,12 +12,26 @@ class Game
     load_or_new
   end
 
+  # if new game, create secret word before play, else load saved game before play
+  def load_or_new
+    puts 'Enter "1" for a new game or "2" to load a saved game.'
+    input = gets.chomp
+    if input == '1'
+      @word.select_word
+      play_game
+    else
+      load_game
+      puts @display.join(' ')
+      play_game
+    end
+  end
+
   # make underscores based on secret word length
   def make_display
     if @display == ''
       length = word.choice.strip!.length
       @display = Array.new(length, '_')
-      puts "\nA mystery word has been selected. Godspeed.\n"
+      puts "\nA secret word awaits. Godspeed.\n"
       puts @display.join(' ')
       puts "\n"
     else
@@ -28,17 +42,17 @@ class Game
   # check if player has guessed secret word
   def check_winner
     if @display == @word.choice.split(//)
-      puts "Congrats! you guessed the word.\n"
+      puts "Congrats! you win.\n"
       @life = 0
     elsif @life.zero?
-      puts "Better luck next time! The word was '#{@word.choice}'."
+      puts "Unlucky! The word was '#{@word.choice}'."
     end
   end
 
   # check if 'save' entered and get desired file name
   def save_game
     if player.guess == 'save'
-      puts 'Enter a file name (no spaces)'
+      puts 'Enter a file name (no spaces).'
       filename = gets.chomp
       to_yaml(filename)
     end
@@ -59,6 +73,7 @@ class Game
     f.close
   end
 
+  # get file name to load and pass into 'from YAML' method
   def load_game
     puts 'Enter the filename (no spaces).'
     filename = gets.chomp
@@ -93,7 +108,7 @@ class Game
   # if wrong guess add to "misses" history
   def miss
     player.misses << @player.guess
-    puts "\nSorry, '#{@player.guess}' is not in the word.\n"
+    puts "\n'#{@player.guess}' is not in the word.\n"
     puts "Misses: #{player.misses.join(', ')}\n"
     @life -= 1
     puts @display.join(' ')
@@ -116,19 +131,6 @@ class Game
     new.play_game
   end
 
-  def load_or_new
-    puts 'Enter "1" to play a new game or "2" to load a saved game.'
-    input = gets.chomp
-    case input
-    when '1'
-      @word.select_word
-      play_game
-    when '2'
-      load_game
-      play_game
-    end
-  end
-
   def play_game
     puts @word.choice
     make_display
@@ -145,7 +147,6 @@ end
 
 # class to create and store secret word
 class SecretWord
-
   attr_accessor :choice
 
   def initialize
@@ -173,7 +174,7 @@ class Player
     @guess_history = []
   end
 
-  # get player input and loop until it meets requirements
+  # get player input and pass to valdation method, unless save.
   def player_input
     puts "Enter your guess (one letter a - z), or 'save' to save."
     input = gets.chomp.downcase
@@ -184,6 +185,7 @@ class Player
     end
   end
 
+  # default parameter value is blank in case check history finds the letter has been used
   def validate_input(input = '')
     until input.length == 1 && input =~ /[a-z]/
       puts "\nEnter a valid guess (one letter a - z)."
@@ -194,7 +196,7 @@ class Player
     @guess_history << @guess
   end
 
-  # check to see if player has already entered a given letter
+  # if player has already entered a given letter, call validate_input with no argument to restart loop
   def check_history(input)
     if @guess_history.include?(input)
       puts "You've already tried that one!"
@@ -207,5 +209,4 @@ end
 
 puts 'Welcome to terminal hangman. You get 8 attempts to guess the word. Good luck!'
 
-test = Game.new
-# test.load_game
+Game.new
