@@ -7,3 +7,6 @@ If they want to load a game, the existing saved files are displayed and they ent
 
 You can play online at: https://replit.com/@BenJ8/hangman#main.rb
 
+Screenshot:
+![Screenshot](./screenshot.png?raw=true "")
+
